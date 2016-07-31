@@ -1,0 +1,156 @@
+<!doctype html>
+<html ng-app="home">
+<head>
+  <title><%= username %> Home </title>
+  <link rel="stylesheet" type="text/css" 
+      href="/static/css/styles_chat.css" />
+
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/angular.min.js"></script>
+    <script src="/static/js/angular-cookies.min.js"></script>
+</head>
+<body>
+  <div>
+    <h3>Welcome : <%= username %>  , <%= country %>  Email :  <%= email %> </h3> <hr>
+    <h4>Your Status : <%= status %>  </h4>
+    <a href="/logout">logout</a>
+    <a href="/editProfile">Edit Profile</a><hr>
+  </div>
+  <h5>Msg : <%= msg %></h5>
+  <hr>
+
+  <div ng-controller="homeController" >
+
+ <h2>Friend List</h2>
+
+      <button type="button"  ng-repeat = 'one in friends' class='friends' ng-class="{ 'online': one.online, 'offline': !one.online }" ng-click="showchat(one)" >
+        {{one.name  }} <br> {{one.status}}  <br>
+      <span ng-show="(one.extraMsg)" class="arrived"> {{ one.extraMsg }} New Message</span>
+      </button>
+
+    <hr>
+
+    <div ng-show="(var === 1)" >
+      <h4>{{chatuser.username}} , {{chatuser.country}} Email : {{chatuser.email}}</h4>
+      <h4> {{chatuser.status}}</h4>
+      <hr>
+
+     <div>
+         <h3 ng-repeat = 'message in chats' ng-class="{ 'fp':(message.num === chatuser.msgNum) , 'sp': (message.num !== chatuser.msgNum) }">
+             {{message.msg}}
+         </h3>
+     </div>
+
+
+      <label>Message  </label>
+        <input type="text" name="Message" ng-model="msg" ng-keyup="$event.keyCode == 13 ? sendmsg() : null"><br>
+
+      <button type="button"  ng-show="( msg.length > 0 )"  ng-click="sendmsg()">Send</button>
+
+      <button type="button"  ng-hide="( msg.length > 0 )" disabled>Send</button>
+
+    </div>
+
+  </div>
+  <script>
+
+    var app = angular.module('home',['ngCookies']);
+
+    app.controller('homeController',['$scope','$http','$interval','$httpParamSerializerJQLike','$cookies',function($scope,$http,$interval,$httpParamSerializerJQLike,$cookies){
+
+        $scope.friends = [];
+
+      $interval(function(){
+        $http({
+            url: '/total',
+            method: "POST",
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            data: $httpParamSerializerJQLike({ 'chatWith' : $scope.name || null })
+                }).then(
+                function(res){
+
+                    console.log(res.data);
+
+                   if(res.data.updates == 1 || res.data.updates == 11)
+                         $scope.friends = res.data.arr;
+
+                    //console.log($cookies.get('fnd'));
+
+                    if(res.data.updates === 10 || res.data.updates == 11 )
+                    {
+                        var i;
+
+                        for( i in res.data.chats)
+                            $scope.chats.push(res.data.chats[i]);
+
+                        for(i in $scope.friends){
+                        if(res.data[$scope.friends[i].name] >= 0 )
+                           $scope.friends[i].extraMsg = res.data[$scope.friends[i].name];
+                        }
+                    }
+
+                  if($scope.friends.length != $cookies.get('fnd'))
+                          $cookies.put('friendValue',$cookies.get('friendValue') - 1,{path:'/'});
+
+                }, function(err){
+                  $scope.err = 'Connection Error ! Please Try again';
+                });
+      },1000);
+
+      $scope.var = 0;
+
+      $scope.msg = '';
+
+      $scope.showchat = function (guy) {
+        //console.log(guy.name);
+        $scope.var = 1;
+        $scope.name = guy.name;
+
+        $scope.sendingTo = guy.name;
+
+        $http.get('/chat/' + guy.name).then(
+                function(res){
+
+                  $scope.chatuser = JSON.parse(res.data).user;
+                  $scope.chats = $scope.chatuser.chats;
+
+                    console.log($scope.chats);
+
+                }, function(err){
+                  $scope.err = 'Connection Error ! Please Try again';
+                });
+      };
+
+        $scope.sendmsg = function () {
+
+            $http({
+                url: '/chatmsg/' + $scope.sendingTo,
+                method: "POST",
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                data: $httpParamSerializerJQLike({ 'message' : $scope.msg })
+                      }).then(
+                                function (res) {
+                                    console.log(res.data);
+
+
+                                    if(res.data == 'reload') {
+                                        console.log('reloading');
+                                        window.location.reload();
+                                    }
+
+                                    $scope.msg = '';
+                                },
+                                function (err) {
+                                    console.log(err);
+                                }
+                              );
+
+                                    };
+      
+    }
+
+    ]);
+
+  </script>
+</body>
+</html>
