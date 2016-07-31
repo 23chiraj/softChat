@@ -11,7 +11,7 @@ app.use(cookieParser());
 
 require('./models/users_model.js');
 
-mongoose.connect('mongodb://any:anyone@ds021915.mlab.com:21915/softchat');
+mongoose.connect('mongodb://localhost/auth');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 
@@ -24,7 +24,7 @@ app.use(session({
                 resave: false,
                 saveUninitialized: true,
                 store:new mongoStore({
-                    mongooseConnection:mongoose.createConnection('mongodb://any:anyone@ds021915.mlab.com:21915/softchat'),
+                    mongooseConnection:mongoose.createConnection('mongodb://localhost/auth'),
                     collection: 'session' })
                 }));
 
